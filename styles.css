@@ -312,8 +312,8 @@ body{background:#0B0B0B;color:#F5F1E8}
 .carousel-image-link:hover .carousel-image{transform:scale(1.015)}.carousel-image{transition:transform .6s ease}
 
 /* Enlarged SAZ wordmark using the black, warm-white, and gold brand palette. */
-.nav{height:126px}.logo .brand-logo{width:240px;height:116px;object-fit:cover;object-position:center;filter:drop-shadow(0 2px 7px #0008)}
-@media(max-width:620px){.nav{height:92px}.logo .brand-logo{width:180px;height:86px}}
+.nav{height:160px}.logo .brand-logo{width:320px;height:150px;object-fit:cover;object-position:center;filter:drop-shadow(0 2px 7px #0008)}
+@media(max-width:620px){.nav{height:112px}.logo .brand-logo{width:230px;height:106px}}
 
 .carousel-slide{background:var(--slide-bg,#0b0b0b)}.carousel-image{object-fit:contain;object-position:center center}
 
