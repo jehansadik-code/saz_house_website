@@ -243,12 +243,13 @@ body{background:#0B0B0B;color:#F5F1E8}
 .menu-toggle{font-size:27px}.badge{background:#D4AF37;color:#0B0B0B;font-size:11px;min-width:20px;min-height:20px;display:grid;place-items:center;right:-2px;top:-1px}
 .home-carousel{background:#171613;border-color:#302918}.carousel-shade{background:linear-gradient(90deg,#050505e8 0%,#080807b8 42%,#08080712 100%)}
 .eyebrow,.textlink{color:#D4AF37}.section h2,.page-title,.detail-info h1{color:#F5F1E8}
-.btn{background:#D4AF37;border-color:#D4AF37;color:#0B0B0B}.btn:hover{background:#e6c85f;border-color:#e6c85f;color:#0B0B0B}.btn.secondary{background:transparent;border-color:#D4AF37;color:#F5F1E8}.btn.secondary:hover{background:#D4AF371c;color:#e6c85f}
+.btn,.btn.secondary{background:#fff;border-color:#fff;color:#0B0B0B}.btn:hover,.btn.secondary:hover{background:#e9e9e9;border-color:#e9e9e9;color:#0B0B0B}
 .benefits{border-color:#302c20}.benefit i{font-size:25px;color:#D4AF37}.benefit b{color:#F5F1E8}.benefit small{color:#aaa496}
+.home-carousel + .benefits{display:none}
 .category{background:#131313;border-color:#302c20;color:#F5F1E8;min-height:128px}.category:hover{background:#1b1913;border-color:#D4AF37}.category span{font-size:34px;line-height:1.15}.category b{font-size:11px;color:#F5F1E8}
 .card{background:transparent}.card-info h3,.card-info .price{color:#F5F1E8}.card-info p{color:#aaa496}.product-art{background:#F5F1E8}.product-art .tag{background:#0B0B0B;color:#D4AF37;border-color:#D4AF37}.favorite{font-size:21px;width:40px;height:40px;background:#0b0b0bdd}.favorite.active{color:#D4AF37}
 .rating{color:#D4AF37}.old{color:#999182}.banner{background:#15140f;color:#F5F1E8;border:1px solid #302918}.banner .eyebrow{color:#D4AF37}
-.footer{background:#0e0e0d;border-color:#302c20;color:#bcb6a8}.footer h4{color:#F5F1E8}.footer a{color:#bcb6a8}.copyright{border-color:#302c20;color:#989184}
+.footer{background:#0e0e0d;border-color:#302c20;color:#bcb6a8}.footer-benefits{margin:0 0 40px;padding-top:0;border-top:0}.footer h4{color:#F5F1E8}.footer a{color:#bcb6a8}.copyright{border-color:#302c20;color:#989184}
 .page{color:#F5F1E8}.breadcrumbs,.muted{color:#bcb6a8}
 .filters,.summary,.form-card,.contact-card,.faq-item,.side-nav,.stat,.cart-item,.product-description{background:#131313;border-color:#302c20;color:#F5F1E8}
 .toolbar select,.field input,.field select,.field textarea,.searchbox{background:#111;border-color:#403a2a;color:#F5F1E8}.filter-group label,.field label{color:#c9c3b6}.filter-group input,.radio input{accent-color:#D4AF37}
