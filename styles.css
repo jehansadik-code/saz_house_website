@@ -250,6 +250,7 @@ body{background:#0B0B0B;color:#F5F1E8}
 .card{background:transparent}.card-info h3,.card-info .price{color:#F5F1E8}.card-info p{color:#aaa496}.product-art{background:#F5F1E8}.product-art .tag{background:#0B0B0B;color:#D4AF37;border-color:#D4AF37}.favorite{font-size:21px;width:40px;height:40px;background:#0b0b0bdd}.favorite.active{color:#D4AF37}
 .rating{color:#D4AF37}.old{color:#999182}.banner{background:#15140f;color:#F5F1E8;border:1px solid #302918}.banner .eyebrow{color:#D4AF37}
 .footer{background:#0e0e0d;border-color:#302c20;color:#bcb6a8}.footer-benefits{margin:0 0 40px;padding-top:0;border-top:0}.footer h4{color:#F5F1E8}.footer a{color:#bcb6a8}.copyright{border-color:#302c20;color:#989184}
+.facebook-link{color:#F5F1E8!important}.facebook-qr{display:flex!important;align-items:center;gap:10px;margin-top:14px!important;color:#bcb6a8!important}.facebook-qr img{width:min(152px,100%);height:auto;aspect-ratio:1;background:#fff;padding:3px}.facebook-qr span{font-size:11px;line-height:1.35}
 .page{color:#F5F1E8}.breadcrumbs,.muted{color:#bcb6a8}
 .filters,.summary,.form-card,.contact-card,.faq-item,.side-nav,.stat,.cart-item,.product-description{background:#131313;border-color:#302c20;color:#F5F1E8}
 .toolbar select,.field input,.field select,.field textarea,.searchbox{background:#111;border-color:#403a2a;color:#F5F1E8}.filter-group label,.field label{color:#c9c3b6}.filter-group input,.radio input{accent-color:#D4AF37}
