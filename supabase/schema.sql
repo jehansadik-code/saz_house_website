@@ -70,5 +70,5 @@ create policy "visitors can send contact messages" on public.contact_messages fo
 drop policy if exists "admins manage contact messages" on public.contact_messages;
 create policy "admins manage contact messages" on public.contact_messages for all using (public.is_admin()) with check (public.is_admin());
 
--- After creating your own Supabase account, run this once with your actual email:
--- update public.profiles p set role = 'admin' from auth.users u where p.id = u.id and u.email = 'you@example.com';
+  -- After creating your own Supabase account, run this once with your actual email:
+  -- update public.profiles p set role = 'admin' from auth.users u where p.id = u.id and u.email = 'you@example.com';

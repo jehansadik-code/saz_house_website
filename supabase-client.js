@@ -105,7 +105,7 @@
   }
 
   async function syncState(key, value) {
-    if (!sharedKeys.has(key) || !admin) return;
+    if (!sharedKeys.has(key) || !admin) return { ok: true, skipped: true };
 
     const { error } = await client
       .from('store_state')
@@ -120,7 +120,10 @@
         'Could not save store data:',
         error.message
       );
+      return { ok: false, error: error.message };
     }
+
+    return { ok: true };
   }
 
   async function syncOrders(orders) {
