@@ -152,23 +152,32 @@
 
   function statusFor(member) {
     return !member.is_active || (member.banned_until && new Date(member.banned_until).getTime() > Date.now())
-      ? '<span class="access-status suspended">Suspended</span>'
+      ? '<span class="access-status suspended">Paused</span>'
       : '<span class="access-status active">Active</span>';
+  }
+
+  function passwordStatusFor(member) {
+    const event = (state?.passwordEvents || []).find((item) => item.target_id === member.id);
+    if (!event) return '<small>Password assignment not recorded</small>';
+    const label = event.action === 'staff.created' ? 'Password set at account creation' : 'Password last changed';
+    return `<small>${label}: ${escapeHtml(formatDate(event.created_at))}</small>`;
   }
 
   function teamRows() {
     const members = (state?.staff || []).filter((member) => member.role !== 'customer');
     if (!members.length) return '<tr><td colspan="5" class="admin-empty">No staff accounts yet. Create your first team member above.</td></tr>';
     return members.map((member) => {
-      const suspended = !member.is_active || (member.banned_until && new Date(member.banned_until).getTime() > Date.now());
+      const paused = !member.is_active || (member.banned_until && new Date(member.banned_until).getTime() > Date.now());
       return `<tr>
         <td><b>${escapeHtml(member.email)}</b><small>Added ${escapeHtml(formatDate(member.created_at))}</small></td>
         <td><select class="access-role-select" data-member-id="${escapeHtml(member.id)}" aria-label="Role for ${escapeHtml(member.email)}">${roleOptions(member.role)}</select></td>
         <td>${statusFor(member)}</td>
         <td><small>${escapeHtml(formatDate(member.last_sign_in_at))}</small></td>
         <td class="access-row-actions">
+          ${passwordStatusFor(member)}
           <button type="button" data-access-action="set-password" data-member-id="${escapeHtml(member.id)}">Set password</button>
-          <button type="button" data-access-action="toggle-status" data-member-id="${escapeHtml(member.id)}" data-active="${suspended ? 'true' : 'false'}">${suspended ? 'Activate' : 'Suspend'}</button>
+          ${member.role === 'owner' ? '' : `<button type="button" data-access-action="toggle-status" data-member-id="${escapeHtml(member.id)}" data-active="${paused ? 'true' : 'false'}">${paused ? 'Resume' : 'Pause'}</button>`}
+          ${member.role === 'owner' ? '' : `<button type="button" class="danger" data-access-action="delete-staff" data-member-id="${escapeHtml(member.id)}">Delete</button>`}
         </td>
       </tr>`;
     }).join('');
@@ -326,8 +335,13 @@
     }
     if (action === 'toggle-status' && member) {
       const active = button.dataset.active === 'true';
-      const verb = active ? 'restore access for' : 'suspend';
+      const verb = active ? 'resume access for' : 'pause';
       if (window.confirm(`Do you want to ${verb} ${member.email}?`)) await request('set_status', { userId: memberId, active });
+    }
+    if (action === 'delete-staff' && member) {
+      if (window.confirm(`Delete ${member.email}? This permanently removes their employee account and cannot be undone.`)) {
+        if (await request('delete_staff', { userId: memberId })) notify('Employee account deleted.');
+      }
     }
   }
 

@@ -45,7 +45,7 @@ in your browser, or use a local static server.
 
 ## Admin access
 
-Administration uses Supabase Auth with role-based permissions. The protected `Owner` role can directly create or suspend employee accounts, set an employee's individual password, create custom roles, and select the exact permissions for each role from the admin panel. No invitation or reset email is sent. Passwords are stored by Supabase Auth and are never displayed after saving. Follow [LAUNCH.md](LAUNCH.md) before deploying.
+Administration uses Supabase Auth with role-based permissions. The protected `Owner` role can directly create, pause, or delete non-Owner employee accounts, set an employee's individual password, create custom roles, and select the exact permissions for each role from the admin panel. No invitation or reset email is sent. Passwords are stored by Supabase Auth and are never displayed after saving. Follow [LAUNCH.md](LAUNCH.md) before deploying.
 
 ## Note
 

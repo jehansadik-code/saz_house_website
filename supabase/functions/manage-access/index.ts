@@ -137,17 +137,24 @@ async function allStaff() {
 }
 
 async function dashboard() {
-  const [roles, staff, logsResult] = await Promise.all([
+  const [roles, staff, logsResult, passwordEventsResult] = await Promise.all([
     allRoles(),
     allStaff(),
     service
       .from("admin_audit_log")
       .select("id,action,target_type,target_id,details,created_at")
       .order("created_at", { ascending: false })
-      .limit(20)
+      .limit(20),
+    service
+      .from("admin_audit_log")
+      .select("action,target_id,created_at")
+      .in("action", ["staff.created", "staff.password_changed"])
+      .order("created_at", { ascending: false })
+      .limit(1000)
   ]);
   if (logsResult.error) throw new Error(logsResult.error.message);
-  return { roles, staff, audit: logsResult.data || [] };
+  if (passwordEventsResult.error) throw new Error(passwordEventsResult.error.message);
+  return { roles, staff, audit: logsResult.data || [], passwordEvents: passwordEventsResult.data || [] };
 }
 
 async function saveRole(input: Record<string, unknown>, actorId: string) {
@@ -276,6 +283,13 @@ async function setStaffPassword(input: Record<string, unknown>, actorId: string)
 async function setStatus(input: Record<string, unknown>, actorId: string) {
   const userId = safeText(input.userId, 36);
   const active = input.active === true;
+  const { data: profile, error: targetProfileError } = await service
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (targetProfileError || !profile) throw new Error("That team member no longer exists.");
+  if (profile.role === "owner") throw new Error("Owner accounts cannot be paused.");
   const { error: profileError } = await service.rpc("set_profile_active", { p_user_id: userId, p_active: active });
   if (profileError) throw new Error(profileError.message);
   const { error } = await service.auth.admin.updateUserById(userId, { ban_duration: active ? "none" : "876000h" });
@@ -284,6 +298,21 @@ async function setStatus(input: Record<string, unknown>, actorId: string) {
     throw new Error(error.message);
   }
   await logAction(actorId, active ? "staff.activated" : "staff.suspended", "user", userId);
+}
+
+async function deleteStaff(input: Record<string, unknown>, actorId: string) {
+  const userId = safeText(input.userId, 36);
+  if (userId === actorId) throw new Error("An Owner cannot delete their own account.");
+  const { data: profile, error: profileError } = await service
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError || !profile) throw new Error("That team member no longer exists.");
+  if (profile.role === "owner") throw new Error("Owner accounts cannot be deleted. Assign another role or pause the account instead.");
+  const { error } = await service.auth.admin.deleteUser(userId);
+  if (error) throw new Error(error.message);
+  await logAction(actorId, "staff.deleted", "user", userId);
 }
 
 Deno.serve(async (request) => {
@@ -304,6 +333,7 @@ Deno.serve(async (request) => {
     else if (action === "create_staff") await createStaff(body, actor.user.id);
     else if (action === "set_staff_password") await setStaffPassword(body, actor.user.id);
     else if (action === "set_status") await setStatus(body, actor.user.id);
+    else if (action === "delete_staff") await deleteStaff(body, actor.user.id);
     else return respond(request, 400, { error: "Unknown access-control action." });
 
     return respond(request, 200, { data: await dashboard() });
