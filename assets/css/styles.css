@@ -313,6 +313,22 @@ body{background:#0B0B0B;color:#F5F1E8}
 
 .carousel-image-link:hover .carousel-image{transform:scale(1.015)}.carousel-image{transition:transform .6s ease}
 
+/* Footer CTA must retain contrast against the dark footer on every theme. */
+.footer a.btn,
+.footer a.btn.small {
+  display:inline-flex;
+  background:#d4af37;
+  border-color:#d4af37;
+  color:#0b0b0b;
+  font-weight:800;
+}
+.footer a.btn:hover,
+.footer a.btn.small:hover {
+  background:#f5df82;
+  border-color:#f5df82;
+  color:#0b0b0b;
+}
+
 /* Enlarged SAZ wordmark using the black, warm-white, and gold brand palette. */
 .nav{height:104px}.logo .brand-logo{width:180px;height:84px;object-fit:cover;object-position:center;filter:drop-shadow(0 2px 7px #0008)}
 @media(max-width:620px){.nav{height:72px}.logo .brand-logo{width:129px;height:59px}}

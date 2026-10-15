@@ -1,0 +1,16 @@
+# Launch checklist
+
+1. In Supabase SQL Editor, run `supabase/schema.sql`, then `supabase/launch-hardening.sql`, then `supabase/access-control.sql`.
+2. Create your first administrator in Supabase Auth and assign its `profiles.role` to `admin` before running `access-control.sql`. The access-control migration promotes every legacy `admin` to the protected `owner` role.
+3. Deploy `supabase/functions/storefront` with JWT verification disabled because checkout/contact requests are public and it performs its own validation. Deploy `supabase/functions/manage-access` with the default JWT verification enabled; it also verifies the current user and Owner role inside the function before using its service-role client. The service-role key remains in Supabase secrets only and must never be placed in a browser file.
+4. Set the Edge Function secret `PUBLIC_SITE_URL` to the exact deployed HTTPS origin, for example `https://shop.example.com`. Set `ALLOWED_ORIGINS` to a comma-separated list of allowed browser origins, for example `https://shop.example.com,http://localhost:5500` while developing locally. `PUBLIC_SITE_URL` is also the CORS fallback origin.
+5. Configure Supabase Auth: enable email confirmation, set the production Site URL and redirect allow-list, enable MFA for every Owner, and set a strong password policy.
+6. In the live admin panel, sign in as the Owner and open **Access control**. Create each employee directly using the email and individual password provided on paper, then select a preset or custom role. No invitation or reset email is sent. One role can be assigned to many employees, and every employee has a separate password. The password is stored by Supabase Auth and cannot be viewed after saving; use **Set password** to replace it when needed.
+7. Deploy through a host that honors `_headers` (Netlify/Cloudflare Pages) or copy those headers into your host configuration. Force HTTPS and attach your custom domain.
+8. Upload the missing product and slideshow images before publishing. Do not use customer image data URLs as a long-term image store; use Supabase Storage with a restricted upload policy.
+9. Test: customer order, invalid coupon, out-of-stock order, two simultaneous orders for the same low-stock product, contact form spam, customer login, Owner login, fulfillment-role login, role change, direct employee creation, direct employee password change, logout, and mobile checkout.
+10. Run `supabase/access-control-diagnostics.sql` in Supabase SQL Editor. Confirm RLS is enabled, only the safe order RPCs are used by staff, direct `orders` grants are absent for `anon` and `authenticated`, and at least one active Owner remains.
+
+## Before accepting real card payments
+
+Replace the `Card (demo)` option with a hosted checkout from an approved payment provider. Never collect, transmit, or store raw card numbers in this project.

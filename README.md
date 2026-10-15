@@ -1,7 +1,7 @@
 # SAZ House
 
 <p align="center">
-  <img src="logo.png" alt="SAZ House Logo" width="180">
+  <img src="assets/images/brand/logo.png" alt="SAZ House Logo" width="180">
 </p>
 
 <p align="center">
@@ -43,20 +43,13 @@ index.html
 
 in your browser, or use a local static server.
 
-## Admin Demo
+## Admin access
 
-Open `admin.html`.
-
-```text
-Email: admin@sazhouse.com
-Password: Admin123
-```
-
-> This is a demo admin login. It is **not suitable for production** without a backend and secure authentication.
+Administration uses Supabase Auth with role-based permissions. The protected `Owner` role can directly create or suspend employee accounts, set an employee's individual password, create custom roles, and select the exact permissions for each role from the admin panel. No invitation or reset email is sent. Passwords are stored by Supabase Auth and are never displayed after saving. Follow [LAUNCH.md](LAUNCH.md) before deploying.
 
 ## Note
 
-This version is a frontend/local-storage storefront. Products, cart, orders and settings are stored in the browser and do not automatically sync between devices.
+The cart can be stored locally for convenience. Production orders, inventory, coupons, messages and administrator permissions must be enforced by Supabase using the included schema, hardening migration and Edge Function.
 
 ---
 
