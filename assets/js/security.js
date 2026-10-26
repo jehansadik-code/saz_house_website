@@ -18,6 +18,13 @@
     }
   };
   const notify = message => window.toast ? window.toast(message) : window.alert(message);
+  let checkoutIdempotencyKey = '';
+  const nextCheckoutKey = () => {
+    if (!checkoutIdempotencyKey) {
+      checkoutIdempotencyKey = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`).replace(/-/g, '');
+    }
+    return checkoutIdempotencyKey;
+  };
   const installHoneypot = root => {
     for (const form of root.querySelectorAll?.('#checkout-form, #contact-form') || []) {
       if (form.elements.website) continue;
@@ -103,6 +110,8 @@
       event.stopImmediatePropagation();
       const data = new FormData(form);
       const action = form.id === 'checkout-form' ? 'checkout' : 'contact';
+      const submit = form.querySelector('[type="submit"]');
+      if (submit?.disabled) return;
       const payload = action === 'checkout'
         ? {
             action,
@@ -111,6 +120,7 @@
             deliveryArea: safeText(data.get('deliveryArea') || data.get('city')),
             payment: safeText(data.get('payment')),
             coupon: safeText(localStorage.getItem('sazCouponCode')),
+            idempotencyKey: nextCheckoutKey(),
             website: safeText(data.get('website'))
           }
         : {
@@ -121,6 +131,7 @@
             message: safeText(data.get('message')),
             website: safeText(data.get('website'))
           };
+      if (submit) submit.disabled = true;
       try {
         const response = await fetch(`${window.SAZ_SUPABASE_CONFIG.url}/functions/v1/storefront`, {
           method: 'POST',
@@ -140,9 +151,11 @@
         localStorage.setItem('sazLastOrder', JSON.stringify(result.order));
         localStorage.removeItem('sazCart');
         localStorage.removeItem('sazCouponCode');
+        checkoutIdempotencyKey = '';
         location.href = 'success.html';
       } catch (error) {
         notify(error.message || 'Could not submit your request. Please try again.');
+        if (submit) submit.disabled = false;
       }
     }
   }, true);

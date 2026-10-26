@@ -1,0 +1,5 @@
+[functions.storefront]
+verify_jwt = false
+
+[functions.manage-access]
+verify_jwt = true

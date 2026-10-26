@@ -1,6 +1,6 @@
 # Launch checklist
 
-1. In Supabase SQL Editor, run `supabase/schema.sql`, then `supabase/launch-hardening.sql`, then `supabase/access-control.sql`.
+1. In Supabase SQL Editor, run `supabase/schema.sql` only for a new database. For an existing store, run `supabase/launch-hardening.sql`, then `supabase/variant-inventory.sql`, `supabase/access-control.sql`, and `supabase/order-status-inventory.sql` one at a time. These migrations preserve existing orders and catalog state.
 2. Create your first administrator in Supabase Auth and assign its `profiles.role` to `admin` before running `access-control.sql`. The access-control migration promotes every legacy `admin` to the protected `owner` role.
 3. Deploy `supabase/functions/storefront` with JWT verification disabled because checkout/contact requests are public and it performs its own validation. Deploy `supabase/functions/manage-access` with the default JWT verification enabled; it also verifies the current user and Owner role inside the function before using its service-role client. The service-role key remains in Supabase secrets only and must never be placed in a browser file.
 4. Set the Edge Function secret `PUBLIC_SITE_URL` to the exact deployed HTTPS origin, for example `https://shop.example.com`. Set `ALLOWED_ORIGINS` to a comma-separated list of allowed browser origins, for example `https://shop.example.com,http://localhost:5500` while developing locally. `PUBLIC_SITE_URL` is also the CORS fallback origin.
@@ -9,7 +9,7 @@
 7. Deploy through a host that honors `_headers` (Netlify/Cloudflare Pages) or copy those headers into your host configuration. Force HTTPS and attach your custom domain.
 8. Upload the missing product and slideshow images before publishing. Do not use customer image data URLs as a long-term image store; use Supabase Storage with a restricted upload policy.
 9. Test: customer order, invalid coupon, out-of-stock order, two simultaneous orders for the same low-stock product, contact form spam, customer login, Owner login, fulfillment-role login, role change, direct employee creation, direct employee password change, logout, and mobile checkout.
-10. Run `supabase/access-control-diagnostics.sql` in Supabase SQL Editor. Confirm RLS is enabled, only the safe order RPCs are used by staff, direct `orders` grants are absent for `anon` and `authenticated`, and at least one active Owner remains.
+10. Run `supabase/access-control-diagnostics.sql` and `supabase/storefront-diagnostics.sql` in Supabase SQL Editor. Confirm RLS is enabled, only the safe order RPCs are used by staff, direct `orders` grants are absent for `anon` and `authenticated`, at least one active Owner remains, and every variant product has consistent stock totals.
 
 ## Before accepting real card payments
 
