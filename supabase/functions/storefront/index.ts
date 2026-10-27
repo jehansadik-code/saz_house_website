@@ -13,6 +13,7 @@ const text = (value: unknown, maximum: number) => typeof value === 'string' ? va
 const email = (value: unknown) => { const result = text(value, 254).toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result) ? result : ''; };
 const phone = (value: unknown) => { const result = text(value, 30); return /^[0-9+() -]{7,30}$/.test(result) ? result : ''; };
 const key = (value: unknown) => { const result = text(value, 128); return /^[A-Za-z0-9_-]{16,128}$/.test(result) ? result : ''; };
+const paymentKeys: Record<string, string> = { 'Cash on Delivery': 'cod', bKash: 'bkash', Nagad: 'nagad', 'Card (demo)': 'card' };
 const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))).map(byte => byte.toString(16).padStart(2, '0')).join('');
 const safeError = (error: unknown) => {
   if (error instanceof Error) return error.message;
@@ -58,13 +59,20 @@ Deno.serve(async request => {
       const customerName = text(customer.name, 100), customerPhone = phone(customer.phone), customerEmail = text(customer.email, 254);
       const address = text(customer.address, 500), requestKey = key(input.idempotencyKey || request.headers.get('idempotency-key'));
       if (!customerName || !customerPhone || (customerEmail && !email(customerEmail)) || address.length < 5 || !requestKey || !Array.isArray(input.cart)) return respond({ error: 'Please check your checkout details and try again.' }, 400, origin);
+      const paymentMethod = text(input.payment, 30);
+      const paymentKey = paymentKeys[paymentMethod];
+      if (!paymentKey) return respond({ error: 'Choose a valid payment method.' }, 400, origin);
+      const { data: paymentSettings, error: settingsError } = await supabase.from('store_state').select('value').eq('key', 'settings').maybeSingle();
+      if (settingsError) throw settingsError;
+      if (!paymentSettings?.value) return respond({ error: 'Store is not ready.' }, 503, origin);
+      if (paymentSettings.value.payments?.[paymentKey] !== true) return respond({ error: 'That payment method is not available. Please choose another.' }, 400, origin);
       const fingerprint = await digest(`checkout|${customerPhone}|${email(customerEmail) || customerPhone}|${THROTTLE_PEPPER}`);
       const { data: allowed, error: throttleError } = await supabase.rpc('take_submission_slot', { p_action: 'checkout', p_fingerprint: fingerprint, p_window_seconds: 8 });
       if (throttleError) throw throttleError;
       if (!allowed) return respond({ error: 'Please wait a moment before trying again.' }, 429, origin);
       const { data, error } = await supabase.rpc('create_store_order', {
         p_cart: input.cart, p_customer_name: customerName, p_phone: customerPhone, p_email: customerEmail, p_address: address,
-        p_district: text(customer.district, 100), p_division: text(customer.division, 100), p_delivery_area: text(input.deliveryArea, 30), p_payment_method: text(input.payment, 30), p_coupon: text(input.coupon, 50), p_idempotency_key: requestKey
+        p_district: text(customer.district, 100), p_division: text(customer.division, 100), p_delivery_area: text(input.deliveryArea, 30), p_payment_method: paymentMethod, p_coupon: text(input.coupon, 50), p_idempotency_key: requestKey
       });
       if (error) throw error;
       return respond({ order: data }, 201, origin);

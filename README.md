@@ -1,56 +1,21 @@
 # SAZ House
 
-<p align="center">
-  <img src="assets/images/brand/logo.png" alt="SAZ House Logo" width="180">
-</p>
+Static HTML, CSS, and JavaScript storefront backed by Supabase Auth, database RPCs, and Edge Functions. Vercel serves the static files. The cart and wishlist are browser caches; orders, stock, products, coupons, settings, and contact messages belong to Supabase.
 
-<p align="center">
-  A responsive e-commerce storefront built with HTML, CSS and vanilla JavaScript.
-</p>
+## Local development
 
-## Features
+1. Check that `assets/js/supabase-config.js` contains the intended Supabase project URL and **publishable** key. Never place a service-role or secret key in a browser file.
+2. Serve the repository from an allowed origin, for example `py -m http.server 5500`, then open `http://localhost:5500`. Opening `index.html` through `file://` does not provide an allowed origin for the public Edge Function.
+3. Set `ALLOWED_ORIGINS` for the Supabase functions to include the exact local origin while developing. Production must include the exact Vercel or custom-domain origin.
+4. Run `node --test tests/backend-contract.test.mjs` for the local contract checks.
 
-* 🛍️ Product catalog and categories
-* 🔎 Search, filtering and sorting
-* 🛒 Shopping cart and checkout
-* ❤️ Wishlist and favorites
-* 👤 Customer account and order history
-* 🎟️ Coupon and discount system
-* 📦 Stock and product management
-* ⚙️ Local admin dashboard
-* 💳 COD, bKash, Nagad and demo card options
-* 💾 LocalStorage-based data and JSON backup/restore
-* 📱 Responsive design
+## Features and limits
 
-## Pages
+- Product catalog, filters, cart, wishlist, checkout, contact form, and staff dashboard.
+- Checkout and contact forms call the `storefront` Edge Function. It uses a server-side service-role client; checkout totals and stock are computed in a database transaction.
+- Staff use Supabase Auth and role permissions. The Owner manages staff through `manage-access`.
+- Enabled payment choices come from store settings. `Card (demo)` does not charge a card. Do not enable it for real payments.
+- Customer order history is not connected to accounts. The order reference on the confirmation page is the current way to identify an order.
+- Images are currently stored in large `store_state` JSON values; migrate uploads to storage before growing the catalog.
 
-`Home` · `Shop` · `Product` · `Cart` · `Checkout` · `Account` · `About` · `Contact` · `FAQ` · `Admin`
-
-## Tech Stack
-
-* HTML5
-* CSS3
-* JavaScript
-* Browser LocalStorage
-
-## Run Locally
-
-Simply open:
-
-```text
-index.html
-```
-
-in your browser, or use a local static server.
-
-## Admin access
-
-Administration uses Supabase Auth with role-based permissions. The protected `Owner` role can directly create, pause, or delete non-Owner employee accounts, set an employee's individual password, create custom roles, and select the exact permissions for each role from the admin panel. No invitation or reset email is sent. Passwords are stored by Supabase Auth and are never displayed after saving. Follow [LAUNCH.md](LAUNCH.md) before deploying.
-
-## Note
-
-The cart can be stored locally for convenience. Production orders, inventory, coupons, messages and administrator permissions must be enforced by Supabase using the included schema, hardening migration and Edge Function.
-
----
-
-**SAZ House — E-commerce Storefront**
+See [LAUNCH.md](LAUNCH.md) for the database migration order, secrets, deployment steps, and release checks. Do not run the fresh-project schema on an existing store.

@@ -153,7 +153,7 @@
           document.getElementById('contact-notice')?.style && (document.getElementById('contact-notice').style.display = 'block');
           return;
         }
-        localStorage.setItem('sazLastOrder', JSON.stringify(result.order));
+        localStorage.setItem('sazLastOrder', JSON.stringify({ ...result.order, payment: payload.payment, placedAt: Date.now() }));
         localStorage.removeItem('sazCart');
         localStorage.removeItem('sazCouponCode');
         checkoutIdempotencyKey = '';

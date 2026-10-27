@@ -41,6 +41,7 @@
 
   const client = window.supabase.createClient(config.url, config.publishableKey);
   let admin = false;
+  let currentUser = null;
   let hydrated = false;
   let currentRole = null;
   let permissions = new Set();
@@ -53,6 +54,7 @@
 
   async function refreshRole() {
     const { data: { user } } = await client.auth.getUser();
+    currentUser = user || null;
     if (!user) {
       admin = false;
       currentRole = null;
@@ -235,6 +237,7 @@
     isAdmin: () => admin,
     hasPermission: (permission) => allowed(permission),
     getRole: () => currentRole ? { ...currentRole, permissions: [...permissions] } : null,
+    getUser: () => currentUser ? { id: currentUser.id, email: currentUser.email || '' } : null,
     accessControl,
     async signIn(email, password) {
       const result = await client.auth.signInWithPassword({ email, password });
@@ -243,6 +246,7 @@
     },
     async signOut() {
       admin = false;
+      currentUser = null;
       currentRole = null;
       permissions = new Set();
       return client.auth.signOut();

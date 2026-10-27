@@ -33,3 +33,31 @@ join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
   and c.relname in ('orders', 'checkout_requests', 'submission_throttle')
 order by c.relname;
+
+-- A protected Owner must remain active for staff administration.
+select count(*) filter (where role = 'owner' and is_active) as active_owners
+from public.profiles;
+
+-- Expect no rows. Product stock should equal the sum of its colour/size stock.
+select product.value->>'id' as product_id,
+  (product.value->>'stock')::integer as total_stock,
+  variant_stock.total as summed_variant_stock
+from public.store_state state
+cross join lateral jsonb_array_elements(
+  case when state.key = 'products' and jsonb_typeof(state.value) = 'array'
+    then state.value else '[]'::jsonb end
+) as product(value)
+cross join lateral (
+  select coalesce(sum((variant.value->>'stock')::integer), 0) as total
+  from jsonb_array_elements(
+    case when jsonb_typeof(product.value->'variants') = 'array'
+      then product.value->'variants' else '[]'::jsonb end
+  ) as variant(value)
+) variant_stock
+where state.key = 'products'
+  and jsonb_typeof(product.value->'variants') = 'array'
+  and jsonb_array_length(
+    case when jsonb_typeof(product.value->'variants') = 'array'
+      then product.value->'variants' else '[]'::jsonb end
+  ) > 0
+  and (product.value->>'stock')::integer <> variant_stock.total;
