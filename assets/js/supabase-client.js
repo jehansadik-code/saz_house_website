@@ -98,8 +98,8 @@
     return admin;
   }
 
-  async function hydrate() {
-    if (hydrated) return;
+  async function hydrate({ force = false } = {}) {
+    if (hydrated && !force) return;
     const { data, error } = await client.from('store_state').select('key,value');
     if (error) {
       console.warn('Supabase storefront data is not ready yet:', error.message);

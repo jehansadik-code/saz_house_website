@@ -39,17 +39,17 @@ declare
   products jsonb; settings jsonb; coupons jsonb; cart_item jsonb; product jsonb; original_product jsonb; coupon jsonb; variants jsonb;
   item_index bigint; variant_index bigint; quantity integer; stock integer; unit_price numeric(12,2); selected_color text; selected_size text;
   subtotal numeric(12,2):=0; shipping numeric(12,2):=0; discount numeric(12,2):=0; total_value numeric(12,2):=0; lines jsonb:='[]'::jsonb;
-  reference_code text:='SAZ-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)); request_hash text; existing_hash text; result jsonb;
+  reference_code text:='SAZ-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)); request_hash_value text; existing_hash text; result jsonb;
 begin
   if p_idempotency_key !~ '^[A-Za-z0-9_-]{16,128}$' then raise exception 'validation: Invalid checkout request.'; end if;
   if jsonb_typeof(p_cart)<>'array' or jsonb_array_length(p_cart)=0 or jsonb_array_length(p_cart)>25 then raise exception 'validation: Your cart is invalid.'; end if;
   if char_length(trim(coalesce(p_customer_name,''))) not between 1 and 100 or trim(coalesce(p_phone,'')) !~ '^[0-9+() -]{7,30}$' or char_length(trim(coalesce(p_address,''))) not between 5 and 500 then raise exception 'validation: Please provide valid delivery details.'; end if;
   if nullif(trim(coalesce(p_email,'')),'') is not null and lower(trim(p_email)) !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then raise exception 'validation: Enter a valid email address.'; end if;
   if p_payment_method not in ('Cash on Delivery','bKash','Nagad','Card (demo)') then raise exception 'validation: Invalid payment method.'; end if;
-  request_hash:=encode(digest(jsonb_build_object('cart',p_cart,'name',trim(p_customer_name),'phone',trim(p_phone),'email',lower(trim(coalesce(p_email,''))),'address',trim(p_address),'district',trim(coalesce(p_district,'')),'division',trim(coalesce(p_division,'')),'delivery',p_delivery_area,'payment',p_payment_method,'coupon',upper(trim(coalesce(p_coupon,''))))::text,'sha256'),'hex');
-  insert into public.checkout_requests(idempotency_key,request_hash) values(p_idempotency_key,request_hash) on conflict do nothing;
-  select request_hash,response into existing_hash,result from public.checkout_requests where idempotency_key=p_idempotency_key for update;
-  if existing_hash<>request_hash then raise exception 'conflict: Checkout request key was reused with different details.'; end if;
+  request_hash_value:=encode(extensions.digest(jsonb_build_object('cart',p_cart,'name',trim(p_customer_name),'phone',trim(p_phone),'email',lower(trim(coalesce(p_email,''))),'address',trim(p_address),'district',trim(coalesce(p_district,'')),'division',trim(coalesce(p_division,'')),'delivery',p_delivery_area,'payment',p_payment_method,'coupon',upper(trim(coalesce(p_coupon,''))))::text,'sha256'),'hex');
+  insert into public.checkout_requests(idempotency_key,request_hash) values(p_idempotency_key,request_hash_value) on conflict do nothing;
+  select checkout_request.request_hash,checkout_request.response into existing_hash,result from public.checkout_requests as checkout_request where checkout_request.idempotency_key=p_idempotency_key for update;
+  if existing_hash<>request_hash_value then raise exception 'conflict: Checkout request key was reused with different details.'; end if;
   if result is not null then return result; end if;
   select value into products from public.store_state where key='products' for update;
   select value into settings from public.store_state where key='settings'; select value into coupons from public.store_state where key='coupons';

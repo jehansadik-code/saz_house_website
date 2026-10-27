@@ -141,8 +141,13 @@
           },
           body: JSON.stringify(payload)
         });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Request could not be completed.');
+        let result = {};
+        try { result = await response.json(); } catch { /* A proxy error can be non-JSON. */ }
+        if (!response.ok) {
+          const responseError = typeof result?.error === 'string' ? result.error : 'Request could not be completed.';
+          const reference = typeof result?.requestId === 'string' ? ` Reference: ${result.requestId}.` : '';
+          throw new Error(`${responseError}${reference}`);
+        }
         if (action === 'contact') {
           form.reset();
           document.getElementById('contact-notice')?.style && (document.getElementById('contact-notice').style.display = 'block');

@@ -14,7 +14,11 @@ const email = (value: unknown) => { const result = text(value, 254).toLowerCase(
 const phone = (value: unknown) => { const result = text(value, 30); return /^[0-9+() -]{7,30}$/.test(result) ? result : ''; };
 const key = (value: unknown) => { const result = text(value, 128); return /^[A-Za-z0-9_-]{16,128}$/.test(result) ? result : ''; };
 const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))).map(byte => byte.toString(16).padStart(2, '0')).join('');
-const safeError = (error: unknown) => error instanceof Error ? error.message : '';
+const safeError = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;
+  return '';
+};
 const statusFor = (message: string) => message.startsWith('rate_limit:') ? 429 : message.startsWith('conflict:') || message.startsWith('stock:') ? 409 : message.startsWith('validation:') ? 400 : 500;
 const messageFor = (message: string) => {
   if (message.startsWith('rate_limit:')) return 'Please wait a moment before trying again.';
@@ -25,6 +29,7 @@ const messageFor = (message: string) => {
 };
 
 Deno.serve(async request => {
+  const requestId = crypto.randomUUID();
   const origin = request.headers.get('origin')?.replace(/\/$/, '') || null;
   if (request.method === 'OPTIONS') return new Response(null, { status: origin && ALLOWED_ORIGINS.has(origin) ? 204 : 403, headers: headers(origin) });
   if (request.method !== 'POST') return respond({ error: 'Method not allowed.' }, 405, origin);
@@ -66,7 +71,9 @@ Deno.serve(async request => {
     }
     return respond({ error: 'Unknown request.' }, 400, origin);
   } catch (error) {
-    const message = safeError(error); console.error('storefront request failed', message);
-    return respond({ error: messageFor(message) }, statusFor(message), origin);
+    const message = safeError(error);
+    const status = statusFor(message);
+    console.error(JSON.stringify({ event: 'storefront_request_failed', requestId, status, message }));
+    return respond({ error: messageFor(message), requestId }, status, origin);
   }
 });

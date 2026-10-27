@@ -105,6 +105,31 @@
   let cart = read('sazCart', []), wish = read('sazWish', []), selected = 'hoodie', chosenSize = '', chosenColor='', productSelectionId='', quantity = 1, activeFilter = 'All Products', galleryIndex=0, carouselIndex=0, carouselTimer, selectedProductPage='homeFeatured';
   const path = location.pathname.split('/').pop() || 'index.html';
   const page = path.replace('.html','');
+  // The server owns inventory. In particular, never adjust local product stock
+  // before or alongside the locked status RPC: that could double-restock a
+  // cancelled order when the browser and database update race each other.
+  document.addEventListener('change',async e=>{
+    const control=e.target;
+    if(page!=='admin'||!(control instanceof HTMLSelectElement)||control.dataset.action!=='order-status')return;
+    e.preventDefault();e.stopImmediatePropagation();
+    const orders=read('sazOrders',[]),index=Number(control.dataset.index),order=orders[index],previous=order?.status,next=control.value;
+    if(!order||previous===next)return;
+    if(!window.SAZ_SUPABASE?.hasPermission('orders.manage')){control.value=previous;toast('You do not have permission to update orders.');return;}
+    control.disabled=true;
+    try{
+      const {error}=await window.SAZ_SUPABASE.client.rpc('update_staff_order_status',{p_reference:order.ref,p_status:next});
+      if(error)throw error;
+      await window.SAZ_SUPABASE.hydrate({force:true});
+      const workspace=document.getElementById('admin-workspace');
+      if(workspace)workspace.innerHTML=adminContent('Orders');
+      updateAdminCounts();
+      toast(next==='Cancelled'?'Order cancelled and stock returned':'Order status updated');
+    }catch(error){
+      console.error('Could not update order status:',error);
+      control.value=previous;control.disabled=false;
+      toast('Could not update the order. Refresh and try again.');
+    }
+  },true);
   const product = id => products.find(p => p.id === id) || defaultProducts.find(p=>p.id===id) || defaultProducts[0];
   const logo = `<a class="logo" href="index.html" aria-label="SAZ House home"><img class="brand-logo" src="assets/images/brand/logo.png" data-default-logo="assets/images/brand/logo.png" alt="SAZ House" onerror="this.onerror=null;this.src=this.dataset.defaultLogo"></a>`;
   const count = () => cart.reduce((n,x)=>n+x.qty,0);
@@ -247,7 +272,11 @@
   }
   document.addEventListener('click',e=>{let trigger=e.target.closest('[data-action="product-new"],[data-action="product-edit"]');if(!trigger)return;queueMicrotask(()=>{let form=document.getElementById('product-form');if(!form||form.querySelector('#variant-stock-editor'))return;let p=products.find(x=>x.id===form.elements.oldId?.value)||{},field=document.createElement('section');field.className='admin-field-full';field.id='variant-stock-editor';form.querySelector('[name="sizes"]')?.closest('label')?.insertAdjacentElement('afterend',field);form.querySelector('[name="stock"]')?.closest('label')?.remove();paintStockMatrix(form,p,true);});});
   document.addEventListener('input',e=>{let form=e.target.closest('#product-form');if(!form)return;if(e.target.matches('[name="colors"],[name="sizes"]'))paintStockMatrix(form,products.find(p=>p.id===form.elements.oldId?.value)||{});if(e.target.matches('[data-variant-stock]')){let total=[...form.querySelectorAll('[data-variant-stock]')].reduce((n,input)=>n+cleanStock(input.value),0);form.querySelector('.stock-matrix-total strong').textContent=total;}});
-  document.addEventListener('submit',e=>{if(e.target.id==='settings-form'&&!['cod','bkash','nagad','card'].some(k=>e.target.querySelector(`[name="${k}"]:checked`))){e.preventDefault();e.stopImmediatePropagation();toast('Enable at least one checkout payment method');}if(e.target.id==='checkout-form'){for(const row of cart){let p=products.find(x=>x.id===row.id);if(!p)continue;if(Array.isArray(p.variants)&&p.variants.length){let v=p.variants.find(v=>v.color===(row.color||p.color)&&v.size===row.size);if(v)v.stock=Math.max(0,Number(v.stock||0)-row.qty);p.stock=totalStock(p);}else if(Number.isFinite(Number(p.stock)))p.stock=Math.max(0,Number(p.stock)-row.qty);}save('sazProducts',products);}},true);
+  // security.js is registered first and owns successful checkout submission. If it
+  // is missing or fails to load, stop here instead of allowing old localStorage
+  // checkout handlers below to create an unsynchronized order.
+  document.addEventListener('submit',e=>{if(e.target.id!=='checkout-form')return;e.preventDefault();e.stopImmediatePropagation();toast('Secure checkout is temporarily unavailable. Please refresh and try again.');},true);
+  document.addEventListener('submit',e=>{if(e.target.id==='settings-form'&&!['cod','bkash','nagad','card'].some(k=>e.target.querySelector(`[name="${k}"]:checked`))){e.preventDefault();e.stopImmediatePropagation();toast('Enable at least one checkout payment method');}},true);
   document.addEventListener('submit',e=>{if(e.target.id==='product-form'){e.preventDefault();let d=new FormData(e.target),oldId=d.get('oldId'),id=oldId||d.get('name').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+Date.now().toString().slice(-4),item={id,name:d.get('name').trim(),category:d.get('category').trim(),price:Number(d.get('price')),old:Number(d.get('old'))||0,color:d.get('color').trim()||'Black',type:d.get('type'),stock:Number(d.get('stock'))||0,badge:d.get('badge').trim(),sizes:d.get('sizes').split(',').map(x=>x.trim()).filter(Boolean),image:d.get('image').trim(),video:d.get('video').trim(),description:d.get('description').trim(),active:d.get('active')==='on'};if(oldId)products=products.map(p=>p.id===oldId?item:p);else products.unshift(item);save('sazProducts',products);document.getElementById('admin-workspace').innerHTML=adminContent('Products');toast(oldId?'Product updated':'Product added');return;}if(e.target.id==='coupon-form'){e.preventDefault();let d=new FormData(e.target),oldCode=d.get('oldCode'),code=d.get('code').trim().toUpperCase(),coupon={code,type:d.get('type'),value:Number(d.get('value')),minimum:Number(d.get('minimum'))||0,active:d.get('active')==='on'},list=read('sazCoupons',[]).filter(c=>c.code!==oldCode&&c.code!==code);list.push(coupon);save('sazCoupons',list);document.getElementById('admin-workspace').innerHTML=adminContent('Coupons');toast('Coupon saved');return;}if(e.target.id==='settings-form'){e.preventDefault();let d=new FormData(e.target);save('sazSettings',{dhaka:Number(d.get('dhaka')),outside:Number(d.get('outside')),freeThreshold:Number(d.get('freeThreshold')),payments:{cod:d.get('cod')==='on',bkash:d.get('bkash')==='on',nagad:d.get('nagad')==='on',card:d.get('card')==='on'},bkashNumber:d.get('bkashNumber').trim(),nagadNumber:d.get('nagadNumber').trim()});toast('Store settings saved');return;}if(e.target.id==='checkout-form'){e.preventDefault();e.stopImmediatePropagation();let data=new FormData(e.target),t=getTotals(data.get('city')),orders=read('sazOrders',[]),order={ref:'SAZ-'+Date.now().toString().slice(-6),date:new Date().toLocaleDateString(),createdAt:new Date().toISOString(),items:count(),lines:cart.map(x=>({id:x.id,name:product(x.id).name,color:x.color||product(x.id).color,size:x.size,qty:x.qty,price:product(x.id).price})),subtotal:t.sub,shipping:t.shipping,discount:t.discount,coupon:t.coupon,total:t.total,status:'Processing',customer:data.get('name'),phone:data.get('phone'),email:data.get('email'),address:data.get('address'),city:data.get('city'),district:data.get('district'),division:data.get('division'),payment:data.get('payment')};orders.unshift(order);save('sazOrders',orders);save('sazLastOrder',order);save('sazCouponCode','');cart=[];persistCart();location.href='success.html';}});
   document.addEventListener('submit',e=>{if(e.target.id==='contact-form'){e.preventDefault();let data=new FormData(e.target),messages=read('sazMessages',[]);messages.unshift({id:'MSG-'+Date.now(),name:data.get('name'),email:data.get('email'),subject:data.get('subject'),message:data.get('message'),date:new Date().toISOString()});save('sazMessages',messages);document.getElementById('contact-notice').style.display='block';e.target.reset();return;}if(e.target.id==='login-form'){e.preventDefault();let data=new FormData(e.target);save('sazUser',{email:data.get('email')});location.reload();return;}if(e.target.id==='admin-login-form'){e.preventDefault();toast('Administrator sign-in requires Supabase Auth.');return;}if(e.target.id==='checkout-form'){e.preventDefault();let data=new FormData(e.target),t=getTotals(),orders=read('sazOrders',[]),order={ref:'SAZ-'+Date.now().toString().slice(-6),date:new Date().toLocaleDateString(),items:count(),total:t.total,status:'Processing',customer:data.get('name'),payment:data.get('payment')};orders.unshift(order);save('sazOrders',orders);save('sazLastOrder',order);cart=[];persistCart();location.href='success.html';}});
   document.addEventListener('submit',e=>{if(e.target.id==='site-content-form'){e.preventDefault();let d=new FormData(e.target),c={announcement:d.get('announcement').trim(),heroEyebrow:getSiteContent().heroEyebrow||'',heroTitle:getSiteContent().heroTitle||'',heroText:getSiteContent().heroText||'',heroButton:getSiteContent().heroButton||'SHOP NOW',aboutStory:d.get('aboutStory').trim(),footerText:d.get('footerText').trim(),contactEmail:d.get('contactEmail').trim(),contactPhone:d.get('contactPhone').trim(),contactLocation:d.get('contactLocation').trim(),logoPath:d.get('logoPath').trim()||'assets/images/brand/logo.png',carouselSlides:getSiteContent().carouselSlides||[]};save('sazSiteContent',c);toast('Site content saved');location.reload();}});
@@ -320,7 +349,7 @@
               <h3>Shipping Information</h3>
               <div class='form-grid'>
                 <div class='field'><label>Full name</label><input name='name' required placeholder='Your full name'></div>
-                <div class='field'><label>Phone number</label><input name='phone' required pattern='[0-9+() -]{7,}' placeholder='01XXXXXXXXX'></div>
+                <div class='field'><label>Phone number</label><input name='phone' type='tel' required minlength='7' maxlength='30' placeholder='01XXXXXXXXX'></div>
                 <div class='field full'><label>Address</label><textarea name='address' required rows='4' placeholder='House, road, area'></textarea></div>
               </div>
             </div>
